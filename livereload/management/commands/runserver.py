@@ -2,8 +2,10 @@
 from optparse import make_option
 try:
     from urllib.request import urlopen
+    import urllib.request as request
 except ImportError:  # Python 2 fall back
     from urllib2 import urlopen
+    import urllib2 as request
 
 from django.conf import settings
 from django.core.management.color import color_style
@@ -25,7 +27,7 @@ class Command(RunserverCommand):
     default_port = getattr(settings, 'LIVERELOAD_PORT', '35729')
     # Allow a settings option to set the default host
     default_host = getattr(settings, 'LIVERELOAD_HOST', 'localhost')
-
+    
     if callable(getattr(RunserverCommand, 'add_arguments', None)):
         def add_arguments(self, parser):
             super(Command, self).add_arguments(parser)
@@ -68,6 +70,8 @@ class Command(RunserverCommand):
         """
         style = color_style()
         verbosity = int(options['verbosity'])
+        if options['livereload_host'] == default_host:
+            request.getproxies = lambda: {}
         host = '%s:%s' % (options['livereload_host'],
                           options['livereload_port'])
         try:
