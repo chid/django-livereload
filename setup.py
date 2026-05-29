@@ -31,5 +31,4 @@ setup(
 
     license=livereload.__license__,
     include_package_data=True,
-    install_requires=['beautifulsoup4>=4.3.2'],
 )
