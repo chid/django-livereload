@@ -1,24 +1,18 @@
 """
 Middleware for injecting the live-reload script.
 """
-from bs4 import BeautifulSoup
+import re
 
-from django.conf import settings
 from django.utils.deprecation import MiddlewareMixin
 from django.utils.encoding import smart_str
 
-try:
-    import html5lib  # noqa
-    html5lib_is_installed = True
-except ImportError:
-    html5lib_is_installed = False
 
-
-IS_HTML5 = getattr(settings, 'LIVERELOAD_HTML5', html5lib_is_installed)
-
-PARSER = 'html.parser'
-if IS_HTML5:
-    PARSER = 'html5lib'
+SCRIPT_TAG = '<script src="http://localhost:35729/livereload.js"></script>'
+HEAD_CLOSE_RE = re.compile(r'</head\s*>', re.IGNORECASE)
+SCRIPT_PRESENT_RE = re.compile(
+    r'<script\b[^>]*\bsrc=["\']http://localhost:35729/livereload\.js["\']',
+    re.IGNORECASE,
+)
 
 
 class LiveReloadScript(MiddlewareMixin):
@@ -35,19 +29,14 @@ class LiveReloadScript(MiddlewareMixin):
         if content_type not in ['text/html', 'application/xhtml+xml']:
             return response
 
-        soup = BeautifulSoup(
-            smart_str(response.content), PARSER)
+        content = smart_str(response.content)
 
-        if not getattr(soup, 'head', None):
+        if SCRIPT_PRESENT_RE.search(content):
             return response
 
-        if soup.head.find('script', src='http://localhost:35729/livereload.js'):
+        match = HEAD_CLOSE_RE.search(content)
+        if not match:
             return response
 
-        script = soup.new_tag(
-            'script', src='http://localhost:35729/livereload.js')
-        soup.head.append(script)
-
-        response.content = str(soup)
-
+        response.content = content[:match.start()] + SCRIPT_TAG + content[match.start():]
         return response
